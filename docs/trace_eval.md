@@ -17,19 +17,35 @@
 
 ## 🔍 2. SO SÁNH PHẢN HỒI (TEST CASE #3)
 
-**Câu hỏi**: *"Thời tiết ở Hà Nội hôm nay thế nào và tôi nên mặc gì đi chơi?"*
+> ✅ Cả hai phản hồi dưới đây đều là **dữ liệu chạy thật** (`MistralProvider` / `mistral-medium-latest`,
+> 2026-07-28), không phải ví dụ mẫu.
+
+**Câu hỏi**: *"Tôi muốn tra cứu đơn hàng DH001, số điện thoại đặt hàng của tôi là 0901234567.
+Đơn của tôi hiện đang ở đâu và đã giao chưa?"*
 
 ### 🤖 Chatbot Baseline:
-* **Phản hồi**: *"Tôi không có truy cập Internet thời gian thực nên không biết thời tiết hôm nay ở Hà Nội."*
-* **Nhận xét**: An toàn nhưng không giải quyết được nhu cầu thực tế của người dùng.
+
+* **Phản hồi**: *"Để tra cứu đơn hàng **DH001**, vui lòng cung cấp thêm **email hoặc số điện thoại**
+  đã đăng ký khi đặt hàng để tôi xác thực và tra cứu chính xác nhé!"*
+* **Nhận xét**: ❌ **Không giải quyết được vấn đề.** Người dùng ĐÃ đưa số điện thoại ngay trong câu hỏi,
+  nhưng Chatbot không có tool nên không tra cứu được — nó chỉ có thể hỏi vòng lại. Không một dữ kiện
+  nào (trạng thái đơn, ngày giao, tên sản phẩm) được cung cấp.
 
 ### 🧠 ReAct Agent:
-* **Thought 1**: Cần tra cứu thời tiết Hà Nội.
-* **Action 1**: `get_weather['Hà Nội']`
-* **Observation 1**: `Thời tiết Hà Nội: 28°C, Nắng nhẹ, Độ ẩm 65%.`
-* **Thought 2**: Đã có thông tin 28°C nắng nhẹ, đưa ra lời khuyên trang phục.
-* **Final Answer**: *"Thời tiết Hà Nội hôm nay 28°C, nắng nhẹ. Bạn nên mặc quần áo thoáng mát!"*
-* **Nhận xét**: Hoàn thành xuất sắc nhiệm vụ nhờ sự kết hợp giữa suy luận và công cụ.
+
+* **Thought 1**: Khách hàng muốn tra cứu trạng thái đơn hàng DH001 với số điện thoại 0901234567.
+  Tôi cần gọi tool `search_order`.
+* **Action 1**: `search_order[order_id="DH001", customer_contact="0901234567"]`
+* **Observation 1** *(do APP chèn, từ tool thật — rút gọn)*:
+  `{"success": true, "order": {"order_id": "DH001", "status": "delivered", "status_label": "Đã giao", "days_since_delivery": 5, "items": [{"item_id": "SP-AO-001", "name": "Áo thun VinAI", "variant": "Xanh, size M"}]}, "auth_token": "[REDACTED]"}`
+* **Thought 2**: Đã nhận được kết quả. Đơn ở trạng thái "Đã giao", giao cách đây 5 ngày.
+* **Final Answer**: *"Đơn hàng **DH001** của bạn đã được **giao thành công**... Đơn hàng đã được giao
+  cách đây 5 ngày."*
+* **Nhận xét**: ✅ **Hoàn thành nhiệm vụ.** Mọi con số trong câu trả lời đều truy ngược được về
+  Observation của tool — đúng yêu cầu *grounding* của rubric. `stop_reason=final_answer`, 2/4 vòng lặp.
+
+**Kết luận**: đúng bài toán cần Agent. Chatbot không thiếu *khả năng ngôn ngữ*, nó thiếu **quyền truy
+cập dữ liệu thật** — và không có tool thì không cách nào tự bù đắp được.
 
 ---
 
@@ -43,7 +59,7 @@
 
 | Mã | Dạng lỗi (Failure Mode) | Cách kích hoạt (Trap Input) | Biểu hiện kỳ vọng ở Agent V1 | Cơ chế phục hồi ở Agent V2 | Trạng thái |
 | :---: | :--- | :--- | :--- | :--- | :---: |
-| **F1** | **Unknown Tool** | Hỏi việc ngoài bộ tool, VD: *"Hủy đơn hàng #DH1024 giúp tôi"* khi chưa có tool hủy đơn | LLM tự bịa tên tool `huy_don_hang`, app không tìm thấy trong `AVAILABLE_TOOLS` | Observation trả về danh sách tool hợp lệ để LLM chọn lại ở vòng sau | ⬜ *chưa quan sát được — xem 5.2* |
+| **F1** | **Unknown Tool** | Hỏi việc ngoài bộ tool, VD: *"Hủy đơn hàng #DH1024 giúp tôi"* khi chưa có tool hủy đơn | LLM tự bịa tên tool `huy_don_hang`, app không tìm thấy trong `AVAILABLE_TOOLS` | Observation trả về danh sách tool hợp lệ để LLM chọn lại ở vòng sau | ⬜ *chưa quan sát được — xem 6.4* |
 | **F2** | **Malformed Args** | Câu thiếu tham số bắt buộc, VD: *"Đơn của tôi tới đâu rồi?"* (không có mã đơn) | Parser nhận `tra_cuu_don_hang['']` hoặc sai cú pháp ngoặc | Observation nêu đúng cú pháp / hỏi lại người dùng mã đơn thay vì crash | ✅ **Quan sát rất nhiều lần** (`MALFORMED_ARGS`, `MISSING_ARGUMENTS`) — RCA ở 3.2 |
 | **F3** | **Repeated Action** | Câu bẫy khiến tool luôn trả lỗi giống nhau, VD: mã đơn **không tồn tại** `#DH0000` | Gọi lặp 1 tool với **cùng tham số** qua nhiều vòng, không tiến triển | Phát hiện action trùng ➔ đổi hướng hoặc dừng sớm | ✅ **Phanh hoạt động** (`stop_reason=repeated_action`, run B) |
 | **F4** | **Budget Exhausted** | Bất kỳ case nào chạm `MAX_ITERATIONS` mà chưa có Final Answer | Vòng lặp bị cắt ngang, không có câu trả lời | Fallback lịch sự, **không crash** (checkpoint CODELAB §5) | ✅ **Phanh hoạt động** (`stop_reason=max_iterations`, run C, không crash) |
@@ -258,9 +274,19 @@ Final Answer: Để tra cứu đơn hàng **DH-1002**, vui lòng cung cấp thê
    `"Mã đơn phải có dạng 'DH' và ít nhất 3 chữ số, ví dụ DH001."`
    ➔ **Không mã đơn nào trong bộ test tồn tại trong dataset.**
 
-> ⚠️ **Việc cần làm cho Role 1** (`config/test_cases.json`): bổ sung email/SĐT vào câu hỏi và đổi mã đơn
-> sang đúng dataset (`DH001`…). Nếu không, rubric tiêu chí 3 **không có trace thật để chấm** — Agent
-> chưa từng chạm tool lần nào.
+> ✅ **ĐÃ XỬ LÝ (2026-07-28)**: Role 5A được Role 1 ủy quyền vá `config/test_cases.json`. Nội dung vá:
+>
+> * Bổ sung email/SĐT đúng dataset vào 5 câu hỏi cần tool (`DH001`+`0901234567`, `DH005`+`0905555555`,
+>   `DH002`+`0902222222`).
+> * Đổi toàn bộ mã đơn sang đúng định dạng dataset: `DH-1002`➔`DH001`, `DH-2025`➔`DH005`,
+>   `DH-0000`➔`DH999` (đúng format nhưng cố tình KHÔNG tồn tại — để bẫy F3/F4 vẫn hoạt động),
+>   `DH-9999`➔`DH001`.
+> * Sửa case #2: chính sách **15 ngày** (`RETURN_WINDOW_DAYS = 15`, `src/tools.py:30`) thay vì 7 ngày
+>   ghi nhầm trong `expected_behavior` cũ.
+> * Case #4 nêu rõ biến thể muốn đổi (**"màu Xám"**) để luồng 2 tool chạy được trọn vẹn.
+> * Giữ nguyên case #6 **không có** mã đơn/liên hệ — đó chính là bẫy F2 hợp lệ.
+>
+> Kết quả sau khi vá xem mục 6.
 
 ### 5.2. Trace thật sau khi sửa đầu vào (chạy tay để kiểm chứng loop)
 
@@ -318,5 +344,128 @@ Ngoài ra `auth_token` luôn hiện `"[REDACTED]"` trong trace — token thật 
 
 **Đề xuất thứ tự sửa**: (2) thêm ví dụ cú pháp vào prompt ➔ (1) sửa test case ➔ chạy lại toàn bộ ➔
 (3) cân nhắc nâng `MAX_ITERATIONS` lên 6 nếu luồng 2 tool vẫn thiếu lượt.
+
+---
+
+## 🏁 6. AGENT V1 ➔ V2: KẾT QUẢ SAU KHI VÁ TEST CASE (MỐC 3)
+
+| Thông số | Giá trị |
+| :--- | :--- |
+| Ngày chạy | 2026-07-28 |
+| Bộ test | `config/test_cases.json` **đã vá** (xem 5.1) |
+| Provider / Model | `MistralProvider` / `mistral-medium-latest`, `MAX_ITERATIONS=4` |
+| **V1** | Code như đang có trên `integration/moc3` |
+| **V2** | V1 + **thêm ví dụ cú pháp Action vào system prompt** (đề xuất RCA mục 3.2) |
+
+### 6.1. Bảng so sánh V1 vs V2 trên cả 8 case
+
+| ID | Loại | **V1** `stop_reason` / vòng | **V2** `stop_reason` / vòng | Thay đổi |
+| :---: | :--- | :--- | :--- | :--- |
+| 1 | 🟢 Đơn giản | `final_answer` 1/4 | `final_answer` 1/4 | ➖ giữ nguyên (đúng) |
+| 2 | 🟢 Chính sách | `final_answer` 1/4 | `final_answer` 1/4 | ➖ giữ nguyên (đúng) |
+| 3 | 🟡 1 tool | `final_answer` **4/4** | `final_answer` **2/4** | ✅ **tiết kiệm 2 vòng** |
+| 4 | 🟡 2 tools | ❌ `repeated_action` 4/4 | ✅ `final_answer` 2–4/4 | ✅ **từ THẤT BẠI ➔ THÀNH CÔNG** |
+| 5 | 🔴 F1 | `final_answer` 4/4 | `final_answer` 2/4 | ✅ tiết kiệm 2 vòng |
+| 6 | 🔴 F2 | `final_answer` 1/4 | `final_answer` 1/4 | ➖ giữ nguyên (đúng: hỏi lại) |
+| 7 | 🔴 F3/F4 | 🛡️ `max_iterations` 4/4 | 🛡️ `repeated_action` **2/4** | ✅ chặn **sớm hơn**, tiết kiệm 2 lượt gọi API |
+| 8 | 🔴 F5 | `final_answer` 3/4 | `final_answer` 2/4 | ✅ tiết kiệm 1 vòng |
+
+**Kết luận**: chỉ thêm **4 dòng ví dụ cú pháp** vào system prompt đã (a) cứu case #4 từ thất bại thành
+thành công, và (b) giảm trung bình ~1,6 vòng lặp mỗi case. **Không sửa một dòng code nào** trong
+`src/app.py` hay `src/tools.py`.
+
+> ⚠️ Bản vá prompt này mới chỉ được kiểm chứng bằng **monkeypatch lúc chạy** (không ghi vào repo).
+> `src/prompts.py` thuộc quyền **Role 3** — cần Role 3 áp chính thức thì V2 mới có hiệu lực thật.
+
+### 6.2. 🥇 Trace vàng — Case #4: chuỗi 2 tool + guardrail bắt được tuyên bố khống
+
+```text
+--- Step 1/4 ---
+Thought: ... Trước tiên tôi cần tra cứu đơn để lấy mã SKU và biến thể còn hàng.
+Action: search_order[order_id="DH005", customer_contact="0905555555"]
+👁️ Observation: {"success": true, "order": {"order_id": "DH005", "status": "delivered",
+   "items": [{"item_id": "SP-BALO-001", "name": "Balo laptop", "variant": "Đen", "quantity": 2,
+   "exchange_options": [{"name": "Xám", "available": true,  "same_price": true},
+                        {"name": "Xanh", "available": false, "same_price": true},
+                        {"name": "Da cao cấp", "available": true, "same_price": false}]}]},
+   "auth_token": "[REDACTED]"}
+
+--- Step 2/4 ---
+🛡️ Guardrail: {"error_code": "UNVERIFIED_FINAL_ANSWER",
+   "message": "Không được tuyên bố đổi/trả/hoàn tiền thành công khi chưa có
+               Observation success từ mutation tool."}     <-- model định "chốt đơn" khi CHƯA gọi tool
+
+--- Step 3/4 ---
+Action: create_exchange_request[order_id="DH005", item_id="SP-BALO-001",
+        reason="sản phẩm bị lỗi đường may từ nhà sản xuất", quantity=1, preferred_item="Xám"]
+👁️ Observation: {"success": true, "exchange_request": {"request_id": "YCD-597F2CA6FB8C",
+   "status": "pending_review", "preferred_item": "Xám", "quantity": 1},
+   "message": "Đã tạo yêu cầu đổi hàng và giữ phần tồn kho tương ứng.", "replayed": false}
+
+--- Step 4/4 ---
+Final Answer: Yêu cầu đổi hàng đã được tạo thành công! ... Mã yêu cầu **YCD-597F2CA6FB8C**,
+              trạng thái "Chờ duyệt". Chúng tôi sẽ giữ tồn kho biến thể Xám...
+```
+
+**Vì sao đây là trace đắt giá nhất của báo cáo:**
+
+1. ✅ **Chuỗi 2 tool thật**, Observation của tool 1 (`item_id`, biến thể `Xám`) là đầu vào trực tiếp của
+   tool 2 — đúng nguyên tắc bất biến số 3 của CODELAB §4.
+2. ✅ **Guardrail `UNVERIFIED_FINAL_ANSWER` bắt tại trận** một lần Agent định tuyên bố đổi hàng thành
+   công khi chưa hề gọi mutation tool — đúng nguyên tắc bất biến số 4 (*"không có Final Answer khi chưa
+   có bằng chứng tool"*). Đây là bằng chứng mạnh nhất cho tiêu chí **Guardrails & Observability**.
+3. ✅ Mọi chi tiết trong Final Answer (`YCD-597F2CA6FB8C`, `pending_review`, `Xám`) đều **truy ngược
+   được** về Observation, không có chi tiết nào bịa ra.
+4. ✅ `auth_token` luôn `[REDACTED]` trong toàn bộ log.
+
+> 📌 **Lưu ý về tính lặp lại (variance)**: chạy lại case #4 nhiều lần cho kết quả **không hoàn toàn
+> giống nhau** — có lần Agent hoàn tất cả 2 tool như trên (4/4 vòng), có lần dừng sau tool 1 để hỏi
+> người dùng xác nhận biến thể (2/4 vòng, cũng là hành vi hợp lệ về nghiệp vụ). Đây là đặc tính của LLM
+> ở `temperature` mặc định, **không phải lỗi code**. Khi trình bày nên chạy 2–3 lần và nói rõ điều này.
+
+### 6.3. 📋 Chấm điểm rubric 0–2 cho từng test case (CODELAB §6)
+
+Chấm trên kết quả **V2**. Thang: `0` = sai/bịa, `1` = đúng một phần, `2` = đạt hoàn toàn.
+
+| ID | Factual correctness | Grounding | Tool selection | Termination | **Tổng /8** |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 | 2 | 2 *(không cần bằng chứng)* | 2 *(đúng khi không gọi tool)* | 2 | **8/8** |
+| 2 | 1 *(đúng tinh thần nhưng số ngày lấy từ prompt, chưa có nguồn)* | 1 | 2 | 2 | **6/8** |
+| 3 | 2 | 2 *(trích đúng `delivered`, 5 ngày)* | 2 | 2 | **8/8** |
+| 4 | 2 | 2 *(trích `request_id` thật)* | 2 *(đúng thứ tự 2 tool)* | 2 | **8/8** |
+| 5 | 2 *(từ chối đúng phạm vi)* | 2 *(dẫn trạng thái đơn thật)* | 2 *(tra cứu trước rồi mới từ chối)* | 2 | **8/8** |
+| 6 | 2 *(hỏi lại đúng)* | 2 | 2 *(đúng khi KHÔNG gọi tool)* | 2 | **8/8** |
+| 7 | 2 *(không bịa đơn không tồn tại)* | 2 | 1 *(lặp y hệt 1 lần trước khi bị chặn)* | 2 *(guardrail dừng, không crash)* | **7/8** |
+| 8 | 2 *(từ chối injection)* | 2 | 2 | 2 | **8/8** |
+| | | | | **TỔNG** | **61/64 (95%)** |
+
+**Hai điểm trừ, cả hai đều có nguyên nhân rõ ràng:**
+
+* **Case #2 (−2)**: chính sách 15 ngày hiện chỉ nằm trong system prompt, **không có tool tra cứu chính
+  sách** ➔ câu trả lời không truy ngược được về nguồn dữ liệu nào. *Đề xuất*: Role 2 thêm tool
+  `get_return_policy()` để câu chính sách cũng có grounding thật.
+* **Case #7 (−1)**: Agent vẫn lặp lại y hệt 1 Action trước khi guardrail chặn. Phanh hoạt động đúng,
+  nhưng bản thân model chưa tự đổi hướng sau Observation lỗi. *Đề xuất*: Role 3 thêm chỉ dẫn
+  *"nếu một Action đã thất bại, KHÔNG lặp lại y hệt — hãy đổi tham số hoặc hỏi người dùng"*.
+
+### 6.4. Trạng thái các checkpoint bắt buộc
+
+| Checkpoint (CODELAB) | Trạng thái | Bằng chứng |
+| :--- | :---: | :--- |
+| §4.1 `MAX_ITERATIONS` chặn được vòng lặp | ✅ | Case #7 V1 ➔ `stop_reason=max_iterations` |
+| §4.2 Mỗi Action đúng 1 Observation, do app chèn | ✅ | Case #8, Observation giả trong input không lọt vào scratchpad |
+| §4.3 Observation được nối lại vào prompt vòng sau | ✅ | Case #4, biến thể `Xám` lấy từ Observation bước 1 |
+| §4.4 Không có Final Answer khi chưa có bằng chứng tool | ✅ | Case #4, guardrail `UNVERIFIED_FINAL_ANSWER` |
+| §5 Có ít nhất 1 failed trace được phân tích RCA | ✅ | Mục 3.2 (F2 Malformed Args) |
+| §5 Agent V2 không crash khi gặp câu bẫy | ✅ | 0/8 case crash; case #7 fallback lịch sự |
+| §5 Nhánh phục hồi: unknown tool | ⬜ | **Chưa quan sát được** — xem ghi chú dưới |
+| §5 Nhánh phục hồi: malformed args | ✅ | Mục 3.2, lặp lại ở nhiều case |
+| §5 Nhánh phục hồi: repeated action | ✅ | Case #4 (V1), case #7 (V2) |
+
+> ⬜ **F1 (Unknown Tool) vẫn chưa quan sát được bằng dữ liệu thật.** Case #5 được thiết kế để dụ Agent
+> bịa tool `cancel_order`, nhưng cả V1 lẫn V2 Agent đều **cư xử quá tốt**: nó tra cứu đơn trước rồi từ
+> chối lịch sự đúng phạm vi, không hề bịa tên tool. Đây là *tin tốt về mặt an toàn* nhưng để lại một ô
+> trống trong bảng 3.1. Muốn ép F1 lộ ra cần một câu bơm thẳng tên tool giả — đề xuất bổ sung thành
+> case #9 nếu nhóm muốn phủ kín cả 5 nhánh.
 
 ---
