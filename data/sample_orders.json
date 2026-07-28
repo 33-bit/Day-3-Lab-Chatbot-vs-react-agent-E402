@@ -1,0 +1,225 @@
+{
+  "metadata": {
+    "dataset_name": "Order and after-sales deterministic test data",
+    "version": 1,
+    "order_count": 10,
+    "note": "Toan bo thong tin lien he va don hang trong file nay la du lieu gia lap."
+  },
+  "inventory": {
+    "SP-AO-001": {
+      "exchange_options": {
+        "Trắng, size L": {"stock": 2, "unit_price": 250000},
+        "Đen, size L": {"stock": 0, "unit_price": 250000},
+        "Premium, size L": {"stock": 2, "unit_price": 350000}
+      }
+    },
+    "SP-TAINGHE-001": {"exchange_options": {"Đen": {"stock": 3, "unit_price": 900000}}},
+    "SP-GIAY-001": {"exchange_options": {"Trắng, size 42": {"stock": 2, "unit_price": 800000}}},
+    "SP-DOL0T-001": {"exchange_options": {}},
+    "SP-BALO-001": {
+      "exchange_options": {
+        "Xám": {"stock": 2, "unit_price": 500000},
+        "Xanh": {"stock": 0, "unit_price": 500000},
+        "Da cao cấp": {"stock": 2, "unit_price": 750000}
+      }
+    },
+    "SP-MAYXAY-001": {"exchange_options": {"Trắng": {"stock": 5, "unit_price": 1200000}}},
+    "SP-AOKHOAC-OUTLET": {"exchange_options": {}},
+    "SP-BINHNUOC-001": {"exchange_options": {"Xanh dương": {"stock": 10, "unit_price": 150000}}},
+    "SP-DONGHO-001": {"exchange_options": {"Bạc": {"stock": 1, "unit_price": 2200000}}}
+  },
+  "orders": [
+    {
+      "order_id": "DH001",
+      "customer_contact": "0901234567",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 5,
+      "test_scenario": "Luồng trả hàng thành công; đồng thời test evidence, prompt injection, hết kho và lệch giá.",
+      "items": [
+        {
+          "item_id": "SP-AO-001",
+          "name": "Áo thun VinAI",
+          "variant": "Xanh, size M",
+          "quantity": 1,
+          "unit_price": 250000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    },
+    {
+      "order_id": "DH002",
+      "customer_contact": "0902222222",
+      "status": "shipping",
+      "status_label": "Đang giao",
+      "days_since_delivery": null,
+      "test_scenario": "Từ chối đổi/trả vì đơn đang vận chuyển và chưa giao thành công.",
+      "items": [
+        {
+          "item_id": "SP-TAINGHE-001",
+          "name": "Tai nghe không dây",
+          "variant": "Trắng",
+          "quantity": 1,
+          "unit_price": 900000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    },
+    {
+      "order_id": "DH003",
+      "customer_contact": "expired@example.com",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 16,
+      "test_scenario": "Từ chối đổi/trả vì quá cửa sổ chính sách 15 ngày.",
+      "items": [
+        {
+          "item_id": "SP-GIAY-001",
+          "name": "Giày thể thao",
+          "variant": "Đen, size 42",
+          "quantity": 1,
+          "unit_price": 800000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    },
+    {
+      "order_id": "DH004",
+      "customer_contact": "private@example.com",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 3,
+      "test_scenario": "Từ chối vì sản phẩm vệ sinh cá nhân thuộc danh mục cấm đổi/trả.",
+      "items": [
+        {
+          "item_id": "SP-DOL0T-001",
+          "name": "Đồ lót cá nhân",
+          "variant": "Đen, size M",
+          "quantity": 1,
+          "unit_price": 180000,
+          "return_eligible": false,
+          "exchange_eligible": false,
+          "ineligible_reason": "Sản phẩm vệ sinh cá nhân không hỗ trợ đổi/trả."
+        }
+      ]
+    },
+    {
+      "order_id": "DH005",
+      "customer_contact": "0905555555",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 4,
+      "test_scenario": "Luồng đổi thành công, hết kho, lệch giá và giữ 2 đơn vị tồn kho dùng chung.",
+      "items": [
+        {
+          "item_id": "SP-BALO-001",
+          "name": "Balo laptop",
+          "variant": "Đen",
+          "quantity": 2,
+          "unit_price": 500000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    },
+    {
+      "order_id": "DH006",
+      "customer_contact": "cancelled@example.com",
+      "status": "cancelled",
+      "status_label": "Đã hủy",
+      "days_since_delivery": null,
+      "test_scenario": "Từ chối đổi/trả vì đơn đã bị hủy.",
+      "items": [
+        {
+          "item_id": "SP-MAYXAY-001",
+          "name": "Máy xay sinh tố",
+          "variant": "Đen",
+          "quantity": 1,
+          "unit_price": 1200000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    },
+    {
+      "order_id": "DH007",
+      "customer_contact": "0907777777",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 2,
+      "test_scenario": "Từ chối mặt hàng clearance dù đơn còn trong thời hạn.",
+      "items": [
+        {
+          "item_id": "SP-AOKHOAC-OUTLET",
+          "name": "Áo khoác clearance",
+          "variant": "Nâu, size L",
+          "quantity": 1,
+          "unit_price": 300000,
+          "return_eligible": false,
+          "exchange_eligible": false,
+          "ineligible_reason": "Hàng clearance/xả kho không hỗ trợ đổi/trả."
+        }
+      ]
+    },
+    {
+      "order_id": "DH008",
+      "customer_contact": "bulk@example.com",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 7,
+      "test_scenario": "Kiểm thử trả một phần và chặn quantity vượt quá 3 sản phẩm đã mua.",
+      "items": [
+        {
+          "item_id": "SP-BINHNUOC-001",
+          "name": "Bình nước giữ nhiệt",
+          "variant": "Đen",
+          "quantity": 3,
+          "unit_price": 150000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    },
+    {
+      "order_id": "DH009",
+      "customer_contact": "0909999999",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 6,
+      "test_scenario": "Dùng chung SKU balo với DH005 để kiểm thử reservation tồn kho toàn cục.",
+      "items": [
+        {
+          "item_id": "SP-BALO-001",
+          "name": "Balo laptop",
+          "variant": "Đen",
+          "quantity": 1,
+          "unit_price": 500000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    },
+    {
+      "order_id": "DH010",
+      "customer_contact": "boundary@example.com",
+      "status": "delivered",
+      "status_label": "Đã giao",
+      "days_since_delivery": 15,
+      "test_scenario": "Kiểm thử biên chính sách: đúng ngày thứ 15 vẫn được đổi/trả.",
+      "items": [
+        {
+          "item_id": "SP-DONGHO-001",
+          "name": "Đồng hồ thông minh",
+          "variant": "Đen",
+          "quantity": 1,
+          "unit_price": 2200000,
+          "return_eligible": true,
+          "exchange_eligible": true
+        }
+      ]
+    }
+  ]
+}
