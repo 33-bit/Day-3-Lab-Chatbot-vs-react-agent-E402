@@ -7,11 +7,11 @@
 
 | Tiêu chí | Điểm (1-5) | Lý do đánh giá |
 | :--- | :---: | :--- |
-| 🧠 **Multi-step Reasoning** | `4/5` | Cần suy luận từ tra cứu thời tiết đến chọn trang phục. |
-| 🛠️ **Tool Interaction** | `5/5` | Cần tra cứu dữ liệu thời gian thực qua API thời tiết/chuyến bay. |
-| 🔀 **Dynamic Decision** | `4/5` | Kết quả bước trước quyết định hành động bước sau. |
-| ⏳ **Long Horizon** | `3/5` | Quy trình gồm 2-3 bước xử lý ngắn. |
-| **TỔNG ĐIỂM FIT** | **16/20** | **KẾT LUẬN: BÀI TOÁN RẤT NÊN DÙNG REACT AGENT!** |
+| 🧠 **Multi-step Reasoning** | `4/5` | Cần suy luận qua nhiều bước: xác định mã đơn hàng, kiểm tra trạng thái giao hàng, đối chiếu điều kiện đổi/trả và đưa ra hướng xử lý phù hợp. |
+| 🛠️ **Tool Interaction** | `5/5` | Bắt buộc cần công cụ để tra cứu dữ liệu đơn hàng, trạng thái vận chuyển, chính sách đổi trả và điều kiện hoàn tiền. |
+| 🔀 **Dynamic Decision** | `5/5` | Quyết định phụ thuộc vào kết quả tool: đơn đã giao hay chưa, còn hạn đổi trả không, sản phẩm có thuộc nhóm được đổi trả không. |
+| ⏳ **Long Horizon** | `4/5` | Luồng xử lý thường gồm nhiều bước liên tiếp: tra cứu đơn hàng -> kiểm tra điều kiện -> đề xuất đổi/trả/hoàn tiền -> hướng dẫn bước tiếp theo. |
+| **TỔNG ĐIỂM FIT** | **18/20** | **KẾT LUẬN: BÀI TOÁN RẤT PHÙ HỢP ĐỂ DÙNG REACT AGENT VÌ CẦN TRA CỨU DỮ LIỆU THẬT, RA QUYẾT ĐỊNH THEO TRẠNG THÁI VÀ XỬ LÝ EDGE CASE.** |
 
 ---
 
