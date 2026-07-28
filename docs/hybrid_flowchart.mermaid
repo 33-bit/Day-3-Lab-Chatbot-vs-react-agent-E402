@@ -1,0 +1,75 @@
+%% Hybrid Flowchart - Role 5B / Mốc 4
+%% Đề tài: Trợ Lý Tra Cứu Đơn Hàng & Xử Lý Đổi Trả
+%% Lưu ý layout: dùng 3 lane độc lập, nhãn ngắn và hạn chế cạnh chéo để khi render không bị đè chữ.
+
+%%{init: {"flowchart": {"htmlLabels": true, "nodeSpacing": 70, "rankSpacing": 85, "curve": "linear"}} }%%
+flowchart TD
+    Q["User Query<br/>(config/test_cases.json)"] --> R{"Phân loại yêu cầu"}
+
+    R -->|"Case 1-2"| B1
+    R -->|"Case 3-4"| A1
+    R -->|"Case 5-8"| G1
+
+    subgraph ChatbotPath["Chatbot Baseline Path"]
+        direction TB
+        B1["Câu hỏi đơn giản<br/>chào hỏi / chính sách tĩnh"]
+        B2["CHATBOT_BASELINE_PROMPT"]
+        B3["1 lần gọi LLM"]
+        B4["Không gọi tool<br/>không bịa trạng thái đơn hàng"]
+        B5["Final Answer<br/>hoặc disclaimer an toàn"]
+
+        B1 --> B2 --> B3 --> B4 --> B5
+    end
+
+    subgraph ReactPath["ReAct Agent Path"]
+        direction TB
+        A1["Yêu cầu cần dữ liệu thật<br/>hoặc xử lý đổi/trả"]
+        A2["REACT_SYSTEM_PROMPT<br/>MAX_ITERATIONS = 4"]
+        A3["Thought<br/>xác định bước tiếp theo"]
+        A4{"Đủ thông tin bắt buộc?"}
+        A5["Final Answer<br/>hỏi thêm mã đơn / liên hệ / bằng chứng"]
+        A6["Action<br/>gọi đúng 1 tool"]
+        A7["Tool Executor<br/>search_order<br/>create_return_request<br/>create_exchange_request"]
+        A8["Observation<br/>kết quả thật từ tool"]
+        A9{"Đủ bằng chứng?"}
+        A10["Final Answer<br/>dựa trên Observation"]
+        A11["Lặp bước Thought<br/>nếu chưa đủ bằng chứng"]
+
+        A1 --> A2 --> A3 --> A4
+        A4 -->|"Chưa đủ"| A5
+        A4 -->|"Đủ"| A6 --> A7 --> A8 --> A9
+        A9 -->|"Đủ"| A10
+        A9 -->|"Chưa đủ"| A11 --> A3
+    end
+
+    subgraph GuardrailPath["Guardrail / Safe Fallback Path"]
+        direction TB
+        G1["Câu bẫy / lỗi đầu vào"]
+        G2["F1: Không có tool phù hợp<br/>ví dụ hủy đơn / sửa số điện thoại"]
+        G3["F2: Thiếu tham số<br/>thiếu mã đơn hoặc thông tin xác thực"]
+        G4["F3: Action bị lặp<br/>cùng tool và cùng tham số"]
+        G5["F4: Hết số vòng lặp<br/>MAX_ITERATIONS = 4"]
+        G6["F5: Prompt injection<br/>model tự sinh Observation giả"]
+        G7["Safe Fallback<br/>từ chối lịch sự hoặc hỏi thêm thông tin"]
+
+        G1 --> G2 --> G3 --> G4 --> G5 --> G6 --> G7
+    end
+
+    B5 --> L["Ghi kết quả vào<br/>docs/trace_eval.md"]
+    A5 --> L
+    A10 --> L
+    G7 --> L
+
+    classDef entry fill:#f8fafc,stroke:#475569,color:#0f172a;
+    classDef chatbot fill:#eff6ff,stroke:#2563eb,color:#0f172a;
+    classDef agent fill:#ecfdf5,stroke:#059669,color:#0f172a;
+    classDef guardrail fill:#fff7ed,stroke:#ea580c,color:#0f172a;
+    classDef final fill:#fef2f2,stroke:#dc2626,color:#0f172a;
+    classDef log fill:#f5f3ff,stroke:#7c3aed,color:#0f172a;
+
+    class Q,R entry;
+    class B1,B2,B3,B4,B5 chatbot;
+    class A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11 agent;
+    class G1,G2,G3,G4,G5,G6 guardrail;
+    class G7 final;
+    class L log;
