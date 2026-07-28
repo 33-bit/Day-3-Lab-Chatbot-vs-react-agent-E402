@@ -71,3 +71,52 @@ timeline
 
 > 🚀 **BẮT ĐẦU LÀM BÀI**:
 > Vui lòng mở sổ tay thực hành 👉 **[PHAN_CONG_CONG_VIEC.md](file:///c:/Users/Admin/Documents/VinUni/LabCoachVin/LabKeyCoach/Day-3-Lab-Chatbot-vs-react-agent-E402/docs/PHAN_CONG_CONG_VIEC.md)** để xem phân vai và checklist công việc cụ thể cho từng thành viên!
+
+---
+
+## Order Agent Full-stack UI
+
+Order Agent gồm React/Vite frontend và FastAPI backend. Baseline Chatbot gọi
+provider thật từ backend. ReAct Agent chạy vòng lặp Mốc 3, gọi tool qua secure
+executor, áp dụng guardrail và chỉ hiển thị trace đã kiểm chứng; Thought thô được
+giữ nội bộ và không trả về giao diện.
+
+### Cài dependency
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+
+cd frontend
+npm install
+cd ..
+```
+
+### Chạy backend
+
+```bash
+LLM_PROVIDER=mock python3 -m uvicorn src.api:app --reload --port 8000
+```
+
+API docs mở tại `http://127.0.0.1:8000/docs`.
+
+### Chạy frontend
+
+Mở terminal thứ hai:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Vite mặc định mở tại `http://127.0.0.1:5173`. Nếu cổng đang được dùng, terminal
+sẽ in ra cổng thay thế.
+
+### Kiểm thử
+
+```bash
+python3 -m pytest -q
+
+cd frontend
+npm run build
+npx playwright test
+```

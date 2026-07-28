@@ -5,3 +5,15 @@ __pycache__/
 .venv/
 env/
 venv/
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+frontend/test-results/
+frontend/playwright-report/
+artifacts/
+data/tools_state.sqlite3*

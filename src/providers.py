@@ -4,6 +4,7 @@ Hỗ trợ chuyển đổi linh hoạt giữa các nhà cung cấp AI chỉ bằ
 """
 
 import os
+import re
 import sys
 import json
 import requests
@@ -171,26 +172,76 @@ class MistralProvider(BaseLLMProvider):
 class MockProvider(BaseLLMProvider):
     """Offline Mock Provider (Cho bài test không cần kết nối API)"""
     def generate(self, prompt: str, system_prompt: str = "") -> str:
+        if "react agent" in system_prompt.lower():
+            query_match = re.search(
+                r"<user_query>\s*(.*?)\s*</user_query>",
+                prompt,
+                flags=re.DOTALL,
+            )
+            user_query = query_match.group(1) if query_match else prompt
+            order_match = re.search(r"\bDH\d{3,}\b", user_query.upper())
+            contact_match = re.search(
+                r"(?:\+?84|0)\d{9,10}|[^@\s]+@[^@\s]+\.[^@\s]+",
+                user_query,
+            )
+            controlled_history = prompt.split(
+                "NHẬT KÝ REACT DO APPLICATION KIỂM SOÁT:",
+                maxsplit=1,
+            )[-1]
+
+            if "(chưa có bước nào)" not in controlled_history:
+                order_id = order_match.group(0) if order_match else "đơn hàng"
+                if '"success": true' in controlled_history.lower():
+                    return (
+                        "Thought: Tôi đã có Observation hợp lệ từ hệ thống.\n"
+                        f"Final Answer: Đã tra cứu {order_id} thành công. "
+                        "Thông tin trạng thái đã được xác nhận từ hệ thống."
+                    )
+                return (
+                    "Thought: Observation cho biết chưa thể hoàn tất tra cứu.\n"
+                    "Final Answer: Tôi chưa thể xác thực đơn hàng với thông tin "
+                    "đã cung cấp. Vui lòng kiểm tra lại mã đơn và thông tin liên hệ."
+                )
+
+            if order_match and contact_match:
+                return (
+                    "Thought: Tôi cần xác thực và tra cứu đơn hàng bằng tool.\n"
+                    "Action: search_order["
+                    f"order_id='{order_match.group(0)}', "
+                    f"customer_contact='{contact_match.group(0)}']"
+                )
+            if order_match:
+                return (
+                    "Thought: Tôi còn thiếu thông tin liên hệ để xác thực đơn.\n"
+                    "Final Answer: Vui lòng cung cấp email hoặc số điện thoại đã "
+                    "dùng khi đặt hàng để tôi tra cứu an toàn."
+                )
+            return (
+                "Thought: Tôi cần mã đơn hàng trước khi sử dụng tool.\n"
+                "Final Answer: Vui lòng cung cấp mã đơn theo định dạng DH001 để "
+                "tôi hỗ trợ tra cứu."
+            )
+
         text = prompt.lower()
         if "thời tiết" in text and "hà nội" in text:
             return "Thought: Cần tra cứu thời tiết Hà Nội.\nAction: get_weather['Hà Nội']"
         return "🤖 [Mock Provider]: Phản hồi giả lập offline cho bài test."
 
 
-def get_llm_provider(provider_name: str = None) -> BaseLLMProvider:
+def get_llm_provider(provider_name: str = None, model: str = None) -> BaseLLMProvider:
     """Factory function tự chọn Provider từ biến môi trường LLM_PROVIDER"""
     name = (provider_name or os.getenv("LLM_PROVIDER") or "mock").lower().strip()
     
     if name == "gemini":
-        return GeminiProvider()
+        return GeminiProvider(model=model)
     elif name == "openai":
-        return OpenAIProvider()
+        return OpenAIProvider(model=model)
     elif name == "anthropic":
-        return AnthropicProvider()
+        return AnthropicProvider(model=model)
     elif name == "openrouter":
-        return OpenRouterProvider()
+        return OpenRouterProvider(model=model)
     elif name == "mistral":
-        return MistralProvider()
+        return MistralProvider(model=model)
     else:
         return MockProvider()
 

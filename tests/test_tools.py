@@ -22,6 +22,10 @@ os.environ["TOOLS_ENABLE_FAILURE_SIMULATION"] = "1"
 
 import tools  # noqa: E402
 
+# Pytest có thể đã nạp module ``tools`` khi collect test ReAct/API trước file
+# này. Gán trực tiếp để fault injection luôn được cô lập trong test process.
+tools.ENABLE_FAILURE_SIMULATION = True
+
 
 class ToolTestCase(unittest.TestCase):
     def setUp(self) -> None:
